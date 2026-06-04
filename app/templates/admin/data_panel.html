@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .stat-card {
+        border: none;
+        border-radius: 12px;
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-4px);
+    }
+    .stat-card .card-body {
+        padding: 24px 20px;
+        text-align: center;
+    }
+    .stat-card .stat-icon {
+        font-size: 2.2rem;
+        margin-bottom: 8px;
+    }
+    .stat-card .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    .stat-card .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.85;
+    }
+    .chart-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .chart-card .card-header {
+        background: transparent;
+        font-weight: 600;
+        border-bottom: 1px solid #eee;
+        padding: 14px 20px;
+    }
+    .chart-card .card-body {
+        padding: 16px;
+    }
+    .chart-container {
+        position: relative;
+        width: 100%;
+        height: 300px;
+    }
+    .chart-container canvas {
+        max-height: 300px;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-bar-chart-fill"></i> 数据面板</h2>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">返回管理首页</a>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card text-white bg-primary">
+            <div class="card-body">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value">{{ total_users }}</div>
+                <div class="stat-label">总用户数</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card text-white bg-success">
+            <div class="card-body">
+                <div class="stat-icon">📦</div>
+                <div class="stat-value">{{ total_items }}</div>
+                <div class="stat-label">总商品数</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card text-white bg-warning">
+            <div class="card-body">
+                <div class="stat-icon">📋</div>
+                <div class="stat-value">{{ total_orders }}</div>
+                <div class="stat-label">总订单数</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card text-white bg-info">
+            <div class="card-body">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value">{{ "%.0f"|format(total_amount) }}</div>
+                <div class="stat-label">总交易额（元）</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="row g-3">
+    <div class="col-xl-6">
+        <div class="card chart-card">
+            <div class="card-header">📈 近30天每日新增订单数</div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="dailyOrderChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card chart-card">
+            <div class="card-header">💰 近30天每日交易额</div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="dailyAmountChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card chart-card">
+            <div class="card-header">🏷️ 各分类商品数量占比</div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="categoryPieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card chart-card">
+            <div class="card-header">📊 订单状态分布</div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="orderStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const chartData = {{ chart_data|safe }};
+
+    // 近30天每日新增订单数 - 折线图
+    new Chart(document.getElementById('dailyOrderChart'), {
+        type: 'line',
+        data: {
+            labels: chartData.daily_order_labels,
+            datasets: [{
+                label: '新增订单数',
+                data: chartData.daily_order_data,
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78,115,223,0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+
+    // 近30天每日交易额 - 折线图
+    new Chart(document.getElementById('dailyAmountChart'), {
+        type: 'line',
+        data: {
+            labels: chartData.daily_order_labels,
+            datasets: [{
+                label: '交易额（元）',
+                data: chartData.daily_amount_data,
+                borderColor: '#1cc88a',
+                backgroundColor: 'rgba(28,200,138,0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) { return '¥' + value; }
+                    }
+                }
+            }
+        }
+    });
+
+    // 各分类商品数量占比 - 饼图
+    new Chart(document.getElementById('categoryPieChart'), {
+        type: 'pie',
+        data: {
+            labels: chartData.category_labels,
+            datasets: [{
+                data: chartData.category_data,
+                backgroundColor: [
+                    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e',
+                    '#e74a3b', '#6f42c1', '#fd7e14', '#20c9a6',
+                    '#858796', '#5a5c69', '#2e59d9', '#17a673'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { padding: 16, usePointStyle: true }
+                }
+            }
+        }
+    });
+
+    // 订单状态分布 - 柱状图
+    new Chart(document.getElementById('orderStatusChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.status_labels,
+            datasets: [{
+                label: '订单数量',
+                data: chartData.status_data,
+                backgroundColor: chartData.status_colors,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

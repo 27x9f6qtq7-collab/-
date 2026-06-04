@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>操作日志</h2>
+<form method="GET" action="{{ url_for('admin.logs') }}" class="mb-3 row g-3">
+    <div class="col-md-3">
+        <label>管理员</label>
+        <input type="text" name="admin_name" class="form-control" value="{{ request.args.get('admin_name', '') }}">
+    </div>
+    <div class="col-md-3">
+        <label>操作类型</label>
+        <select name="action" class="form-select">
+            <option value="">全部</option>
+            {% for act in action_types %}
+            <option value="{{ act }}" {% if request.args.get('action') == act %}selected{% endif %}>{{ act }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label>开始时间</label>
+        <input type="date" name="start_date" class="form-control" value="{{ request.args.get('start_date', '') }}">
+    </div>
+    <div class="col-md-2">
+        <label>结束时间</label>
+        <input type="date" name="end_date" class="form-control" value="{{ request.args.get('end_date', '') }}">
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">筛选</button>
+        <a href="{{ url_for('admin.logs') }}" class="btn btn-secondary ms-2 w-100">重置</a>
+        <a href="{{ url_for('admin.export_logs', admin_name=request.args.get('admin_name', ''), action=request.args.get('action', ''), start_date=request.args.get('start_date', ''), end_date=request.args.get('end_date', '')) }}" class="btn btn-success ms-2 w-100">📥 导出Excel</a>
+    </div>
+</form>
+
+<div class="table-responsive">
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr><th>时间</th><th>管理员</th><th>操作</th><th>目标</th><th>详情</th><th>IP</th></tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.local_time.strftime('%Y-%m-%d %H:%M:%S') if log.local_time else log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                <td>{{ log.admin_name }}</div>
+                <td>{{ log.action }}</div>
+                <td>{{ log.target_type }} (ID:{{ log.target_id }})</div>
+                <td>{{ log.details or '' }}</div>
+                <td>{{ log.ip_address or '' }}</div>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页导航 -->
+{% if pagination and pagination.pages > 1 %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('admin.logs', page=pagination.prev_num, admin_name=request.args.get('admin_name', ''), action=request.args.get('action', ''), start_date=request.args.get('start_date', ''), end_date=request.args.get('end_date', '')) }}">上一页</a>
+        </li>
+        {% for p in pagination.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+            {% if p %}
+                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin.logs', page=p, admin_name=request.args.get('admin_name', ''), action=request.args.get('action', ''), start_date=request.args.get('start_date', ''), end_date=request.args.get('end_date', '')) }}">{{ p }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('admin.logs', page=pagination.next_num, admin_name=request.args.get('admin_name', ''), action=request.args.get('action', ''), start_date=request.args.get('start_date', ''), end_date=request.args.get('end_date', '')) }}">下一页</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

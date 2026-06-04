@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <h2>学号注册</h2>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label>学号</label>
+                <input type="text" name="student_id" class="form-control" required>
+                <small class="text-muted">请输入您的学号，将作为登录账号</small>
+            </div>
+            <div class="mb-3">
+                <label>邮箱（可选）</label>
+                <input type="email" name="email" class="form-control">
+                <small class="text-muted">可用于接收订单通知，非必填</small>
+            </div>
+            <div class="mb-3">
+                <label>密码</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="agreePrivacy" name="agree_privacy" required>
+                <label class="form-check-label" for="agreePrivacy">
+                    我已阅读并同意 <a href="{{ url_for('main.privacy_policy') }}" target="_blank">《隐私政策》</a>
+                </label>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="agreeTerms" name="agree_terms" required>
+                <label class="form-check-label" for="agreeTerms">
+                    我已阅读并同意 <a href="{{ url_for('main.service_terms') }}" target="_blank">《服务条款》</a>
+                </label>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="agreeDisclaimer" name="agree_disclaimer" required>
+                <label class="form-check-label" for="agreeDisclaimer">
+                    我已阅读并同意 <a href="{{ url_for('main.disclaimer') }}" target="_blank">《免责声明》</a>
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">注册</button>
+        </form>
+        <div class="mt-3 text-center">
+            <a href="{{ url_for('auth.login') }}">已有账号？点击登录</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

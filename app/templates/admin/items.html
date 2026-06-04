@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>物品管理</h2>
+<div class="mb-3">
+    <a href="{{ url_for('admin.item_add') }}" class="btn btn-success">+ 新增物品</a>
+    <a href="?status=" class="btn btn-outline-secondary">全部</a>
+    <a href="?status=on_sale" class="btn btn-outline-primary">在售</a>
+    <a href="?status=off_sale" class="btn btn-outline-secondary">已下架</a>
+    <a href="?status=pending_review" class="btn btn-outline-warning">待审核</a>
+</div>
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <tr><th>ID</th><th>标题</th><th>价格</th><th>卖家</th><th>状态</th><th>推荐</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr class="{{ 'table-warning' if item.is_featured else '' }}">
+                <td>{{ item.id }}</div>
+                <td>{{ item.title }}{% if item.is_featured %} <span class="text-warning">&#9733;</span>{% endif %}</div>
+                <td>¥{{ item.price }}</div>
+                <td>{{ item.seller.student_id }} ({{ item.seller.email or '无邮箱' }})</div>
+                <td>{% if item.status == 'on_sale' %}✅在售{% elif item.status == 'pending_review' %}⏳待审核{% else %}⛔下架{% endif %}</div>
+                <td>
+                    <a href="{{ url_for('admin.item_feature', item_id=item.id) }}" class="btn btn-sm {{ 'btn-outline-secondary' if item.is_featured else 'btn-outline-warning' }}" title="{{ '取消推荐' if item.is_featured else '设为推荐' }}">
+                        {% if item.is_featured %}&#9733; 取消推荐{% else %}&#9734; 推荐{% endif %}
+                    </a>
+                </td>
+                <td>
+                    <a href="{{ url_for('admin.item_edit', item_id=item.id) }}" class="btn btn-sm btn-primary">编辑</a>
+                    <a href="{{ url_for('admin.item_toggle', item_id=item.id) }}" class="btn btn-sm btn-warning">{% if item.status == 'on_sale' %}下架{% elif item.status == 'off_sale' %}上架{% else %}上架{% endif %}</a>
+                    {% if item.status == 'pending_review' and current_user.role == 'super_admin' %}
+                    <form method="POST" action="{{ url_for('admin.approve_item', item_id=item.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-success">审核通过</button>
+                    </form>
+                    {% endif %}
+                    <a href="{{ url_for('admin.item_delete', item_id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除？')">删除</a>
+                  </div>
+                  </div>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

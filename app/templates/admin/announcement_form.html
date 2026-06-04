@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ '编辑公告' if announcement else '新增公告' }}</h2>
+<form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3"><label>标题</label><input type="text" name="title" class="form-control" value="{{ announcement.title if announcement else '' }}" required></div>
+    <div class="mb-3"><label>内容</label><textarea name="content" class="form-control" rows="5" required>{{ announcement.content if announcement else '' }}</textarea></div>
+    <div class="mb-3 form-check"><input type="checkbox" name="is_active" class="form-check-input" {% if announcement and announcement.is_active %}checked{% endif %}> <label class="form-check-label">显示在前台</label></div>
+    <button type="submit" class="btn btn-primary">保存</button>
+    <a href="{{ url_for('admin.announcements') }}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

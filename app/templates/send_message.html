@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>发送私信给 {{ receiver.student_id }}</h2>
+<form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3"><label>内容</label><textarea name="content" class="form-control" rows="5" required></textarea></div>
+    <button type="submit" class="btn btn-primary">发送</button>
+    <a href="{{ url_for('main.messages') }}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

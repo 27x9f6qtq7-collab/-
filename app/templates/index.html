@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- 首页推荐轮播 -->
+{% if featured_items %}
+<div id="featuredCarousel" class="carousel slide mb-4" data-bs-ride="carousel" data-bs-interval="3000">
+    <div class="carousel-indicators">
+        {% for item in featured_items %}
+        <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="{{ loop.index0 }}" class="{{ 'active' if loop.first else '' }}" aria-label="Slide {{ loop.index }}"></button>
+        {% endfor %}
+    </div>
+    <div class="carousel-inner rounded shadow-sm" style="max-height: 400px;">
+        {% for item in featured_items %}
+        <div class="carousel-item {{ 'active' if loop.first else '' }}">
+            <a href="{{ url_for('main.item_detail', item_id=item.id) }}">
+                <img src="{{ item.image_url }}" class="d-block w-100" style="height: 400px; object-fit: contain; background: #f8f9fa;" alt="{{ item.title }}">
+                <div class="carousel-caption d-none d-md-block" style="background: rgba(0,0,0,0.5); border-radius: 8px;">
+                    <h5>{{ item.title }}</h5>
+                    <p class="text-warning fw-bold fs-5">¥{{ item.price }}</p>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">上一张</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">下一张</span>
+    </button>
+</div>
+{% endif %}
+
+<h1 class="mb-4">🔥 热卖二手好物</h1>
+
+<!-- 公告栏 -->
+{% if announcements %}
+<div id="announcementCarousel" class="mb-4">
+    {% for ann in announcements %}
+    <div class="alert alert-warning alert-dismissible fade show announcement-item mb-1" role="alert" data-index="{{ loop.index0 }}" {% if not loop.first %}style="display:none;"{% endif %}>
+        <strong>📢 {{ ann.title }}</strong>&nbsp;&nbsp;{{ ann.content }}
+        <small class="text-muted">({{ ann.created_at.strftime('%Y-%m-%d') }})</small>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 搜索栏 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <form method="GET" action="{{ url_for('main.index') }}" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="search" class="form-control" placeholder="搜索商品标题或描述" value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="col-md-2">
+                <select name="category" class="form-select">
+                    <option value="">全部分类</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if request.args.get('category')|int == cat.id %}selected{% endif %}>{{ '|---' * cat.level() }}{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="condition" class="form-select">
+                    <option value="">全部成色</option>
+                    <option value="全新" {% if request.args.get('condition') == '全新' %}selected{% endif %}>全新</option>
+                    <option value="几乎全新" {% if request.args.get('condition') == '几乎全新' %}selected{% endif %}>几乎全新</option>
+                    <option value="轻微使用" {% if request.args.get('condition') == '轻微使用' %}selected{% endif %}>轻微使用</option>
+                    <option value="正常使用" {% if request.args.get('condition') == '正常使用' %}selected{% endif %}>正常使用</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <input type="number" name="min_price" class="form-control" placeholder="最低价" step="0.01" value="{{ request.args.get('min_price', '') }}">
+            </div>
+            <div class="col-md-1">
+                <input type="number" name="max_price" class="form-control" placeholder="最高价" step="0.01" value="{{ request.args.get('max_price', '') }}">
+            </div>
+            <div class="col-md-2">
+                <select name="sort" class="form-select">
+                    <option value="newest" {% if request.args.get('sort') == 'newest' %}selected{% endif %}>最新发布</option>
+                    <option value="price_asc" {% if request.args.get('sort') == 'price_asc' %}selected{% endif %}>价格升序</option>
+                    <option value="price_desc" {% if request.args.get('sort') == 'price_desc' %}selected{% endif %}>价格降序</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">搜索</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 商品列表 -->
+<div class="row">
+    {% for item in items %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <img src="{{ item.image_url }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+            <div class="card-body">
+                <h5 class="card-title">{{ item.title }}</h5>
+                <p class="card-text text-truncate">{{ item.description }}</p>
+                <p class="card-text text-primary fw-bold">¥{{ item.price }}</p>
+                <p class="small text-muted">库存：{{ item.quantity }} 件</p>
+                <p class="small text-muted">分类：{{ item.category.name if item.category else '未分类' }}</p>
+                <p class="small">
+                    <img src="{{ url_for('static', filename=item.seller.avatar) }}" 
+                         class="rounded-circle" 
+                         style="width: 20px; height: 20px; object-fit: cover; vertical-align: middle; margin-right: 3px;">
+                    {{ item.seller.student_id }}
+                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {{ '#4caf50' if item.seller.is_online else '#9e9e9e' }}; margin-left: 4px; vertical-align: middle;" title="{{ item.seller.last_active_display }}"></span>
+                </p>
+                <a href="{{ url_for('main.item_detail', item_id=item.id) }}" class="btn btn-outline-primary">查看详情</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12"><div class="alert alert-info">暂无在售物品，敬请期待~</div></div>
+    {% endfor %}
+</div>
+
+<!-- 分页导航 -->
+{% if pagination and pagination.pages > 1 %}
+{% set url_args = dict(search=request.args.get('search', ''), category=request.args.get('category', ''), sort=request.args.get('sort', ''), condition=request.args.get('condition', ''), min_price=request.args.get('min_price', ''), max_price=request.args.get('max_price', '')) %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('main.index', page=pagination.prev_num, **url_args) }}">上一页</a>
+        </li>
+        {% for p in pagination.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+            {% if p %}
+                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.index', page=p, **url_args) }}">{{ p }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('main.index', page=pagination.next_num, **url_args) }}">下一页</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var items = document.querySelectorAll('#announcementCarousel .announcement-item');
+    if (items.length <= 1) return;
+    var current = 0;
+    setInterval(function() {
+        items[current].style.display = 'none';
+        current = (current + 1) % items.length;
+        items[current].style.display = 'block';
+    }, 5000);
+})();
+</script>
+{% endblock %}

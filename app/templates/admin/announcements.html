@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>公告管理</h2>
+<a href="{{ url_for('admin.announcement_add') }}" class="btn btn-success mb-3">+ 新增公告</a>
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead><tr><th>ID</th><th>标题</th><th>内容</th><th>状态</th><th>创建时间</th><th>操作</th></thead>
+        <tbody>
+            {% for ann in announcements %}
+            <tr>
+                <td>{{ ann.id }}</td>
+                <td>{{ ann.title }}</td>
+                <td>{{ ann.content|truncate(50) }}</td>
+                <td>
+                    {% if ann.is_active %}
+                    <span class="badge bg-success">显示中</span>
+                    {% else %}
+                    <span class="badge bg-secondary">已隐藏</span>
+                    {% endif %}
+                </td>
+                <td>{{ ann.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <a href="{{ url_for('admin.announcement_toggle', ann_id=ann.id) }}" class="btn btn-sm btn-{% if ann.is_active %}secondary{% else %}success{% endif %}">{% if ann.is_active %}隐藏{% else %}显示{% endif %}</a>
+                    <a href="{{ url_for('admin.announcement_edit', ann_id=ann.id) }}" class="btn btn-sm btn-primary">编辑</a>
+                    <a href="{{ url_for('admin.announcement_delete', ann_id=ann.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除？')">删除</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

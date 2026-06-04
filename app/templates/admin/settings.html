@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>平台后台设置</h2>
+<form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3">
+        <label>背景类型</label>
+        <select name="bg_type" class="form-select" id="bgType">
+            <option value="color" {% if bg_type == 'color' %}selected{% endif %}>纯色背景</option>
+            <option value="image" {% if bg_type == 'image' %}selected{% endif %}>图片背景</option>
+        </select>
+    </div>
+    <div id="colorDiv">
+        <div class="mb-3">
+            <label>背景颜色</label>
+            <input type="text" name="bg_value" class="form-control" value="{{ bg_value if bg_type == 'color' else '#f8f9fa' }}">
+        </div>
+    </div>
+    <div id="imageDiv" style="display: none;">
+        <div class="mb-3">
+            <label>上传背景图片</label>
+            <input type="file" name="bg_image" class="form-control" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
+            {% if bg_value and bg_type == 'image' %}
+                <div class="mt-2">
+                    <img src="{{ bg_value }}" style="max-width: 200px; max-height: 100px;">
+                    <p class="text-muted small">当前背景图片</p>
+                </div>
+            {% endif %}
+            <small>支持 jpg, png, gif, webp，不超过5MB</small>
+        </div>
+        <div class="mb-3">
+            <a href="{{ url_for('admin.clear_background') }}" class="btn btn-sm btn-danger" onclick="return confirm('清除背景图片？')">清除背景图片</a>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label>管理员联系方式（用于“联系管理人员”弹窗）</label>
+        <input type="text" name="admin_contact" class="form-control" value="{{ admin_contact }}">
+        <small>邮箱、QQ、微信号或电话</small>
+    </div>
+
+    <div class="mb-3">
+        <label>超时订单联系信息（24小时后自动显示）</label>
+        <textarea name="timeout_contact" class="form-control" rows="4">{{ timeout_contact }}</textarea>
+        <small>支持HTML，超过24小时未处理的待确认订单会直接显示此内容。</small>
+    </div>
+
+    <h4 class="mt-4">前台联系管理人员按钮</h4>
+    <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" name="show_contact_btn" id="show_contact_btn" {% if show_contact_btn %}checked{% endif %}>
+        <label class="form-check-label" for="show_contact_btn">显示“联系管理人员”按钮（在主页面导航栏）</label>
+    </div>
+    <div class="mb-3">
+        <label>按钮文字</label>
+        <input type="text" name="contact_btn_text" class="form-control" value="{{ contact_btn_text }}">
+    </div>
+    <div class="mb-3">
+        <label>弹窗联系方式内容</label>
+        <textarea name="contact_info" class="form-control" rows="3">{{ contact_info }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">保存所有设置</button>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">返回控制台</a>
+</form>
+<script>
+    function toggleInputs() {
+        const bgType = document.getElementById('bgType').value;
+        const colorDiv = document.getElementById('colorDiv');
+        const imageDiv = document.getElementById('imageDiv');
+        if (bgType === 'color') {
+            colorDiv.style.display = 'block';
+            imageDiv.style.display = 'none';
+        } else {
+            colorDiv.style.display = 'none';
+            imageDiv.style.display = 'block';
+        }
+    }
+    document.getElementById('bgType').addEventListener('change', toggleInputs);
+    toggleInputs();
+</script>
+{% endblock %}

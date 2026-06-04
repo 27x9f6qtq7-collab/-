@@ -1,0 +1,2 @@
+set SECRET_KEY=92afa0354b5e349b0e98117993c8f995ec54cb8fce03d389
+python run.py

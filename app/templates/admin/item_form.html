@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ '编辑物品' if item else '新增物品' }}</h2>
+<form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3"><label>标题</label><input type="text" name="title" class="form-control" value="{{ item.title if item else '' }}" required></div>
+    <div class="mb-3"><label>描述</label><textarea name="description" class="form-control">{{ item.description if item else '' }}</textarea></div>
+    <div class="mb-3"><label>价格</label><input type="number" step="0.01" name="price" class="form-control" value="{{ item.price if item else '' }}" required></div>
+    <div class="mb-3"><label>库存数量</label><input type="number" name="quantity" class="form-control" value="{{ item.quantity if item else 1 }}" min="1" required></div>
+    
+    <div class="mb-3">
+        <label class="form-label">成色</label>
+        <select name="condition" class="form-select">
+            <option value="">-- 请选择成色 --</option>
+            <option value="全新" {% if item and item.condition == '全新' %}selected{% endif %}>全新</option>
+            <option value="几乎全新" {% if item and item.condition == '几乎全新' %}selected{% endif %}>几乎全新</option>
+            <option value="轻微使用" {% if item and item.condition == '轻微使用' %}selected{% endif %}>轻微使用</option>
+            <option value="正常使用" {% if item and item.condition == '正常使用' %}selected{% endif %}>正常使用</option>
+        </select>
+    </div>
+    
+    <div class="mb-3">
+        <label>主图</label>
+        {% if item and item.image_url and not item.image_url.startswith('https://via.placeholder.com') %}
+            <div class="mb-2">
+                <img src="{{ item.image_url }}" style="max-height: 150px; border: 1px solid #ddd; padding: 5px;">
+                <p class="text-muted small">当前主图，重新上传将替换</p>
+            </div>
+        {% endif %}
+        <input type="file" name="image" class="form-control" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp" onchange="previewMainImage(this)">
+        <small>支持 jpg, png, gif, webp，大小不超过16MB</small>
+        <div id="mainImagePreview" class="mt-2 d-flex flex-wrap gap-2"></div>
+    </div>
+
+    <div class="mb-3">
+        <label>细节图（最多6张）</label>
+        <input type="file" name="detail_images" class="form-control" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp, video/mp4, video/webm, video/avi, video/quicktime" multiple>
+        <small>支持图片和视频（mp4/webm/avi/mov），按住Ctrl多选，最多6个文件</small>
+        {% if detail_images %}
+            <div class="mt-2">
+                <p>当前细节图（勾选保留，不勾选则删除）：</p>
+                {% for img in detail_images %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="keep_images" value="{{ img }}" checked>
+                    <label class="form-check-label">
+                        {% if img.lower().endswith(('.mp4', '.webm', '.avi', '.mov')) %}
+                        <video style="height: 60px; margin: 5px; border:1px solid #ddd;"><source src="{{ img }}"></video>
+                        {% else %}
+                        <img src="{{ img }}" style="height: 60px; margin: 5px; border:1px solid #ddd;">
+                        {% endif %}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">分类</label>
+        <select name="category_id" class="form-select" required>
+            <option value="">-- 请选择分类 --</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" 
+                {% if item and item.category_id == cat.id %}selected{% endif %}>
+                {{ '|---' * cat.level() }}{{ cat.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3"><label>卖家</label><select name="seller_id" class="form-select">
+        <option value="">-- 请选择卖家 --</option>
+        {% for u in users %}<option value="{{ u.id }}" {% if item and item.seller_id == u.id %}selected{% endif %}>{{ u.student_id }} ({{ u.email or '无邮箱' }})</option>{% endfor %}
+    </select></div>
+
+    <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" name="allow_bargain" id="allow_bargain" {% if item and item.allow_bargain %}checked{% endif %}>
+        <label class="form-check-label" for="allow_bargain">允许买家砍价</label>
+    </div>
+
+    {% if item %}<div class="mb-3"><label>状态</label><select name="status" class="form-select"><option value="on_sale" {% if item.status == 'on_sale' %}selected{% endif %}>在售</option><option value="off_sale" {% if item.status == 'off_sale' %}selected{% endif %}>下架</option></select></div>{% endif %}
+
+    <button type="submit" class="btn btn-primary">保存</button>
+    <a href="{{ url_for('admin.items') }}" class="btn btn-secondary">返回</a>
+</form>
+<script>
+function previewMainImage(input) {
+    const container = document.getElementById('mainImagePreview');
+    container.innerHTML = '';
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.style.width = '200px';
+            img.style.height = '200px';
+            img.style.objectFit = 'cover';
+            img.style.border = '1px solid #ddd';
+            img.style.padding = '3px';
+            img.style.borderRadius = '4px';
+            container.appendChild(img);
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function previewDetailImages(input) {
+    const container = document.getElementById('detailImagesPreview');
+    container.innerHTML = '';
+    if (input.files) {
+        Array.from(input.files).forEach(function(file) {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.style.width = '200px';
+                    img.style.height = '200px';
+                    img.style.objectFit = 'cover';
+                    img.style.border = '1px solid #ddd';
+                    img.style.padding = '3px';
+                    img.style.borderRadius = '4px';
+                    img.style.margin = '0 4px 4px 0';
+                    container.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

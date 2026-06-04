@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="text-center">
+            <img id="mainImage" src="{{ item.image_url }}" class="img-fluid rounded" style="max-height: 400px; width: auto;">
+            <video id="mainVideo" class="img-fluid rounded" controls style="max-height: 400px; width: auto; display: none;"></video>
+        </div>
+        {% if detail_images %}
+        <div class="mt-3 text-center">
+            <h6>细节图/视频</h6>
+            <div id="detailCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="4000" data-bs-touch="true">
+                <!-- 缩略图指示器 -->
+                <div class="d-flex flex-wrap justify-content-center mb-2">
+                    <div data-bs-target="#detailCarousel" data-bs-slide-to="0" class="active" style="width: 68px; height: 68px; cursor: pointer; margin: 3px;">
+                        <img src="{{ item.image_url }}" class="img-thumbnail" style="width: 68px; height: 68px; object-fit: cover; padding: 0;">
+                    </div>
+                    {% for img in detail_images %}
+                    <div data-bs-target="#detailCarousel" data-bs-slide-to="{{ loop.index }}" style="width: 68px; height: 68px; cursor: pointer; margin: 3px; position: relative; display: inline-block;">
+                        {% if img.lower().endswith(('.mp4', '.webm', '.avi', '.mov')) %}
+                        <img src="{{ item.image_url }}" class="img-thumbnail" style="width: 68px; height: 68px; object-fit: cover; padding: 0; opacity: 0.5;">
+                        <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; color: white; text-shadow: 0 0 4px rgba(0,0,0,0.8); pointer-events: none;">▶</span>
+                        {% else %}
+                        <img src="{{ img }}" class="img-thumbnail" style="width: 68px; height: 68px; object-fit: cover; padding: 0;">
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- 轮播内容 -->
+                <div class="carousel-inner rounded" style="background: #f5f5f5;">
+                    <div class="carousel-item active">
+                        <img src="{{ item.image_url }}" class="d-block mx-auto" style="max-height: 350px; width: auto; cursor: pointer;" onclick="changeMainImage('{{ item.image_url }}')" title="点击切换主图">
+                    </div>
+                    {% for img in detail_images %}
+                    <div class="carousel-item">
+                        {% if img.lower().endswith(('.mp4', '.webm', '.avi', '.mov')) %}
+                        <video class="d-block mx-auto carousel-video" style="max-height: 350px; width: auto;" controls preload="metadata">
+                            <source src="{{ img }}" type="video/mp4">
+                        </video>
+                        {% else %}
+                        <img src="{{ img }}" class="d-block mx-auto" style="max-height: 350px; width: auto; cursor: pointer;" onclick="changeMainImage('{{ img }}')" title="点击切换主图">
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- 左右箭头 -->
+                <button class="carousel-control-prev" type="button" data-bs-target="#detailCarousel" data-bs-slide="prev" style="filter: invert(1); width: 10%;">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#detailCarousel" data-bs-slide="next" style="filter: invert(1); width: 10%;">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="col-md-6">
+        <h2>{{ item.title }}</h2>
+        <p class="lead">{{ item.description }}</p>
+        <h3 class="text-danger">¥{{ item.price }}</h3>
+        <p>
+            <img src="{{ url_for('static', filename=item.seller.avatar) }}" 
+                 class="rounded-circle" 
+                 style="width: 40px; height: 40px; object-fit: cover; vertical-align: middle; margin-right: 6px;">
+            卖家：{{ item.seller.student_id }}
+            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: {{ '#4caf50' if item.seller.is_online else '#9e9e9e' }}; margin-left: 6px; vertical-align: middle;" title="{{ item.seller.last_active_display }}"></span>
+            <small class="text-muted ms-1">{{ item.seller.last_active_display }}</small>
+        </p>
+        <p>库存：{{ item.quantity }} 件 {% if item.quantity == 1 %}<span class="badge bg-warning">最后一件</span>{% elif item.quantity == 0 %}<span class="badge bg-danger">已售罄</span>{% endif %}</p>
+        <p>砍价状态：{% if item.allow_bargain %}允许砍价{% else %}不允许砍价{% endif %}</p>
+        
+        {% if current_user.is_authenticated and item.seller_id != current_user.id %}
+            {% if available_coupons %}
+            <div class="mb-3">
+                <label class="form-label">使用优惠券</label>
+                <select name="coupon_id" form="buyForm" class="form-select">
+                    <option value="">不使用优惠券</option>
+                    {% for uc in available_coupons %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <form id="buyForm" method="POST" action="{{ url_for('main.buy_item', item_id=item.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if item.quantity > 1 %}
+                <div class="mb-3">
+                    <label for="buyQuantity" class="form-label">购买数量</label>
+                    <input type="number" name="quantity" id="buyQuantity" class="form-control" value="1" min="1" max="{{ item.quantity }}" style="max-width: 120px;">
+                    <small class="text-muted">库存 {{ item.quantity }} 件</small>
+                </div>
+                {% endif %}
+                <div class="mb-3">
+                    <label for="buyerNote" class="form-label">给卖家留言（选填）</label>
+                    <textarea name="buyer_note" id="buyerNote" class="form-control" rows="2" maxlength="200" placeholder="如：明天中午食堂面交"></textarea>
+                </div>
+                <button type="submit" class="btn btn-success btn-lg">立即购买</button>
+            </form>
+            
+            {% if item.allow_bargain %}
+            <div class="mt-3 p-3 bg-light">
+                <h5>💬 砍价</h5>
+                <form method="POST" action="{{ url_for('main.bargain', item_id=item.id) }}" class="row g-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="col-auto">
+                        <input type="number" step="0.01" name="offered_price" class="form-control" placeholder="您的出价" required>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-outline-primary">发起砍价</button>
+                    </div>
+                </form>
+                <small class="text-muted">卖家同意后可按此价格购买</small>
+            </div>
+            {% endif %}
+            
+            {% if agreed_bargain %}
+            <form method="POST" action="{{ url_for('main.buy_with_bargain', bargain_id=agreed_bargain.id) }}" class="mt-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label class="form-label">给卖家留言（选填）</label>
+                    <textarea name="buyer_note" class="form-control" rows="2" maxlength="200" placeholder="如：明天中午食堂面交"></textarea>
+                </div>
+                <button type="submit" class="btn btn-warning btn-lg">按砍价价 ¥{{ agreed_bargain.offered_price }} 购买</button>
+            </form>
+            {% endif %}
+        {% elif not current_user.is_authenticated %}
+            <p>请<a href="{{ url_for('auth.login') }}">登录</a>后购买或砍价。</p>
+        {% elif item.seller_id == current_user.id %}
+            <p class="text-muted">您无法购买自己发布的商品。</p>
+        {% endif %}
+        
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary mt-2">返回首页</a>
+        
+    </div>
+</div>
+
+<h3 class="mt-5">商品咨询与评论</h3>
+<div class="card">
+    <div class="card-body">
+        {% if current_user.is_authenticated %}
+        <form method="POST" action="{{ url_for('main.add_comment', item_id=item.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3"><textarea name="content" class="form-control" rows="3" placeholder="有什么问题？咨询卖家..."></textarea></div>
+            <button type="submit" class="btn btn-primary">发表评论</button>
+        </form>
+        <hr>
+        {% else %}
+        <p>请<a href="{{ url_for('auth.login') }}">登录</a>后发表评论。</p>
+        {% endif %}
+        
+        {% for comment in comments %}
+        <div class="border-bottom pb-2 mb-2">
+            <small><strong>{{ comment.user.student_id }}</strong> 于 {{ comment.local_time.strftime('%Y-%m-%d %H:%M') }} 说：</small>
+            <p>{{ comment.content }}</p>
+        </div>
+        {% else %}
+        <p>暂无评论，成为第一个评论的人吧！</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function changeMainImage(src) {
+    document.getElementById('mainVideo').style.display = 'none';
+    document.getElementById('mainImage').style.display = '';
+    document.getElementById('mainImage').src = src;
+}
+function changeMainVideo(src) {
+    var video = document.getElementById('mainVideo');
+    var img = document.getElementById('mainImage');
+    img.style.display = 'none';
+    video.style.display = '';
+    video.innerHTML = '<source src="' + src + '" type="video/mp4">';
+    video.load();
+    video.play();
+}
+
+// 轮播视频控制：播放时暂停自动轮播，播完后自动切下一张
+document.addEventListener('DOMContentLoaded', function () {
+    var carouselEl = document.getElementById('detailCarousel');
+    if (!carouselEl) return;
+    var carousel = bootstrap.Carousel.getInstance(carouselEl) || new bootstrap.Carousel(carouselEl, { interval: 4000 });
+
+    carouselEl.querySelectorAll('.carousel-video').forEach(function (video) {
+        video.addEventListener('play', function () {
+            carousel.pause();
+        });
+        video.addEventListener('ended', function () {
+            carousel.next();
+        });
+        video.addEventListener('pause', function () {
+            if (!video.seeking && !video.ended) {
+                setTimeout(function () { carousel.cycle(); }, 500);
+            }
+        });
+    });
+
+    carouselEl.addEventListener('slide.bs.carousel', function () {
+        carouselEl.querySelectorAll('.carousel-video').forEach(function (v) { v.pause(); });
+    });
+    carouselEl.addEventListener('slid.bs.carousel', function () {
+        var activeVideo = carouselEl.querySelector('.carousel-item.active .carousel-video');
+        if (activeVideo) { activeVideo.play(); }
+    });
+});
+
+
+</script>
+{% endblock %}

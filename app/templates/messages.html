@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>私信中心</h2>
+<a href="{{ url_for('main.compose_message') }}" class="btn btn-primary mb-3">➕ 新建私信</a>
+<ul class="nav nav-tabs" id="msgTab" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#received">收件箱</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#sent">发件箱</button></li>
+</ul>
+<div class="tab-content mt-3">
+    <div class="tab-pane active" id="received">
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>发件人</th><th>内容</th><th>时间</th><th>状态</th><th>操作</th></thead>
+                <tbody>
+                    {% for msg in received %}
+                    <tr class="{% if not msg.is_read %}table-info{% endif %}">
+                        <td>
+                            {{ msg.sender.student_id }}
+                            <a href="{{ url_for('main.block_user', user_id=msg.sender.id) }}" class="btn btn-sm btn-danger ms-2" onclick="return confirm('屏蔽后对方将无法给您发私信，确定？')">屏蔽</a>
+                        </div>
+                        <td>{{ msg.content[:50] }}{% if msg.content|length > 50 %}...{% endif %}</div>
+                        <td>{{ msg.local_time.strftime('%Y-%m-%d %H:%M') }}</div>
+                        <td>{% if msg.is_read %}已读{% else %}未读{% endif %}</div>
+                        <td><a href="{{ url_for('main.view_message', msg_id=msg.id) }}" class="btn btn-sm btn-primary">查看</a></div>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5">暂无消息</div></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if received_pagination and received_pagination.pages > 1 %}
+        <nav><ul class="pagination justify-content-center">...</ul></nav>
+        {% endif %}
+    </div>
+    <div class="tab-pane" id="sent">
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>收件人</th><th>内容</th><th>时间</th><th>操作</th></thead>
+                <tbody>
+                    {% for msg in sent %}
+                    <tr>
+                        <td>{{ msg.receiver.student_id }}</div>
+                        <td>{{ msg.content[:50] }}{% if msg.content|length > 50 %}...{% endif %}</div>
+                        <td>{{ msg.local_time.strftime('%Y-%m-%d %H:%M') }}</div>
+                        <td><a href="{{ url_for('main.view_message', msg_id=msg.id) }}" class="btn btn-sm btn-secondary">查看</a></div>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">暂无已发送消息</div></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if sent_pagination and sent_pagination.pages > 1 %}
+        <nav><ul class="pagination justify-content-center">...</ul></nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

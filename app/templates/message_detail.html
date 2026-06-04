@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>私信详情</h2>
+<div class="card">
+    <div class="card-header">
+        发件人：{{ message.sender.student_id }}
+        <a href="{{ url_for('main.block_user', user_id=message.sender.id) }}" class="btn btn-sm btn-danger ms-2" onclick="return confirm('屏蔽后对方将无法给您发私信，确定？')">屏蔽</a>
+        | 收件人：{{ message.receiver.student_id }} | 时间：{{ message.local_time.strftime('%Y-%m-%d %H:%M') }}
+    </div>
+    <div class="card-body">
+        <p>{{ message.content|replace('\n', '<br>')|safe }}</p>
+    </div>
+</div>
+<form method="POST" action="{{ url_for('main.reply_message', msg_id=message.id) }}" class="mt-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="input-group">
+        <textarea name="content" class="form-control" placeholder="回复内容..." required></textarea>
+        <button type="submit" class="btn btn-primary">回复</button>
+    </div>
+</form>
+<a href="{{ url_for('main.messages') }}" class="btn btn-secondary mt-2">返回消息列表</a>
+{% endblock %}

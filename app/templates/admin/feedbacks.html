@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>用户反馈管理</h2>
+<table class="table table-bordered">
+    <thead>
+        <tr><th>ID</th><th>用户</th><th>标题</th><th>内容</th><th>状态</th><th>回复</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+        {% for fb in feedbacks %}
+        <tr>
+            <td>{{ fb.id }}</div><td>{{ fb.user.student_id }}</div><td>{{ fb.title }}</div><td>{{ fb.content }}</div>
+            <td>{{ fb.status }}</div>
+            <td>{% if fb.reply %}{{ fb.reply }}{% else %}未回复{% endif %}</div>
+            <td>
+                <form method="POST" action="{{ url_for('admin.feedback_reply', feedback_id=fb.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <textarea name="reply" class="form-control mb-1" rows="2" placeholder="回复内容"></textarea>
+                    <button type="submit" class="btn btn-sm btn-primary">回复</button>
+                </form>
+                {% if fb.status != 'closed' %}
+                <a href="{{ url_for('admin.feedback_close', feedback_id=fb.id) }}" class="btn btn-sm btn-warning">关闭</a>
+                {% endif %}
+            </div>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

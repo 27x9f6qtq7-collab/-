@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>我的砍价记录</h2>
+<table class="table table-striped">
+    <thead><tr><th>商品</th><th>原价</th><th>出价</th><th>状态</th><th>时间</th><th>操作</th></thead>
+    <tbody>
+        {% for b in bargains %}
+        <tr>
+            <td><a href="{{ url_for('main.item_detail', item_id=b.item.id) }}">{{ b.item.title }}</a></div>
+            <td>¥{{ b.item.price }}</div>
+            <td>¥{{ b.offered_price }}</div>
+            <td>
+                {% if b.status == 'pending' %}等待回复
+                {% elif b.status == 'agreed' %}卖家同意
+                {% elif b.status == 'rejected' %}卖家拒绝
+                {% endif %}
+              </div>
+            <td>{{ b.local_time.strftime('%Y-%m-%d %H:%M') if b.local_time else b.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+            <td>
+                {% if b.status == 'rejected' %}
+                <a href="{{ url_for('main.item_detail', item_id=b.item.id) }}" class="btn btn-sm btn-primary">再次砍价</a>
+                {% elif b.status == 'agreed' %}
+                <a href="{{ url_for('main.item_detail', item_id=b.item.id) }}" class="btn btn-sm btn-success">查看商品</a>
+                {% endif %}
+              </div>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

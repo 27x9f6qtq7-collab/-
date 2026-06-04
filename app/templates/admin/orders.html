@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>订单管理</h2>
+<div class="mb-3">
+    <a href="?status=" class="btn btn-outline-secondary">全部</a>
+    <a href="?status=pending" class="btn btn-outline-warning">待付款</a>
+    <a href="?status=submitted" class="btn btn-outline-info">待确认</a>
+    <a href="?status=paid" class="btn btn-outline-primary">待发货</a>
+    <a href="?status=shipped" class="btn btn-outline-primary">已发货</a>
+    <a href="?status=completed" class="btn btn-outline-success">已完成</a>
+    <a href="{{ url_for('admin.export_orders', status=request.args.get('status', '')) }}" class="btn btn-success">📥 导出Excel</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>订单ID</th>
+                <th>订单号</th>
+                <th>商品</th>
+                <th>买家学号</th>
+                <th>金额</th>
+                <th>状态</th>
+                <th>下单时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.id }}</div>
+                <td>{{ order.order_number }}</div>
+                <td>{{ order.item.title if order.item else (order.snapshot|from_json).title if order.snapshot else '商品已删除' }}</div>
+                <td>{{ order.buyer.student_id }}</div>
+                <td>¥{{ order.total_price }}</div>
+                <td>
+                    {% if order.status == 'pending' %}待付款
+                    {% elif order.status == 'submitted' %}待确认
+                    {% elif order.status == 'paid' %}待发货
+                    {% elif order.status == 'shipped' %}已发货
+                    {% elif order.status == 'completed' %}已完成
+                    {% elif order.status == 'cancelled' %}已取消
+                    {% endif %}
+                  </div>
+                <td>
+                    {% if order.local_time %}
+                        {{ order.local_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                    {% else %}
+                        {{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                    {% endif %}
+                  </div>
+                <td>
+                    <form method="POST" action="{{ url_for('admin.order_update', order_id=order.id) }}" class="d-flex flex-wrap">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="status" class="form-select form-select-sm w-auto me-2 mb-1">
+                            <option value="pending" {% if order.status=='pending' %}selected{% endif %}>待付款</option>
+                            <option value="submitted" {% if order.status=='submitted' %}selected{% endif %}>待确认</option>
+                            <option value="paid" {% if order.status=='paid' %}selected{% endif %}>待发货</option>
+                            <option value="shipped" {% if order.status=='shipped' %}selected{% endif %}>已发货</option>
+                            <option value="completed" {% if order.status=='completed' %}selected{% endif %}>已完成</option>
+                            <option value="cancelled" {% if order.status=='cancelled' %}selected{% endif %}>已取消</option>
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary mb-1">更新状态</button>
+                    </form>
+                    {% if current_user.student_id == 'admin' %}
+                    <form method="POST" action="{{ url_for('admin.order_delete', order_id=order.id) }}" style="display:inline" onsubmit="return confirm('永久删除订单？此操作不可恢复，商品将重新上架。')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-danger mt-1">删除</button>
+                    </form>
+                    {% endif %}
+                    <a href="{{ url_for('main.order_detail', order_id=order.id) }}" class="btn btn-sm btn-info mt-1">查看详情</a>
+                  </div>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页导航 -->
+{% if pagination and pagination.pages > 1 %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('admin.orders', page=pagination.prev_num, status=status_filter) }}">上一页</a>
+        </li>
+        {% for p in pagination.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+            {% if p %}
+                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin.orders', page=p, status=status_filter) }}">{{ p }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('admin.orders', page=pagination.next_num, status=status_filter) }}">下一页</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

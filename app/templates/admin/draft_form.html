@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ '编辑草稿' if draft else '新建草稿' }}</h2>
+<form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3"><label>标题</label><input type="text" name="title" class="form-control" value="{{ draft.title if draft else '' }}" required></div>
+    <div class="mb-3"><label>描述</label><textarea name="description" class="form-control">{{ draft.description if draft else '' }}</textarea></div>
+    <div class="mb-3"><label>价格</label><input type="number" step="0.01" name="price" class="form-control" value="{{ draft.price if draft else '' }}" required></div>
+    <div class="mb-3"><label>分类</label><select name="category_id" class="form-select">
+        <option value="">无分类</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if draft and draft.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+    </select></div>
+    <div class="mb-3"><label>卖家</label><select name="seller_id" class="form-select">
+        <option value="">--请选择卖家--</option>
+        {% for u in users %}
+        <option value="{{ u.id }}" {% if draft and draft.user_id == u.id %}selected{% endif %}>{{ u.student_id }} ({{ u.email or '无邮箱' }})</option>
+        {% endfor %}
+    </select></div>
+    
+    <div class="mb-3">
+        <label>主图</label>
+        {% if draft and draft.image_url %}
+            <div class="mb-2"><img src="{{ draft.image_url }}" style="max-height: 100px;"></div>
+        {% endif %}
+        <input type="file" name="image" class="form-control" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
+        <small class="text-muted">支持 jpg, png, gif, webp，大小不超过16MB</small>
+    </div>
+    
+    <div class="mb-3">
+        <label>细节图（最多6张）</label>
+        <input type="file" name="detail_images" class="form-control" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp" multiple>
+        <small>按住Ctrl可多选</small>
+        {% if detail_images %}
+            <div class="mt-2">
+                <p>当前细节图（勾选保留，不勾选删除）：</p>
+                {% for img in detail_images %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="keep_images" value="{{ img }}" checked>
+                    <label><img src="{{ img }}" style="height: 60px; margin: 5px;"></label>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3 form-check">
+        <input type="checkbox" name="allow_bargain" class="form-check-input" {% if draft and draft.allow_bargain %}checked{% endif %}>
+        <label class="form-check-label">允许砍价</label>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">保存草稿</button>
+    <a href="{{ url_for('admin.drafts') }}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

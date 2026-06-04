@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between mb-3">
+        <h2>分类管理</h2>
+        <a href="{{ url_for('admin.add_category') }}" class="btn btn-primary">添加分类</a>
+    </div>
+    <table class="table table-bordered">
+        <thead>
+            <tr><th>ID</th><th>分类名称</th><th>父级</th><th>排序</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            {% for cat in categories %}
+            <tr>
+                <td>{{ cat.id }}</td>
+                <td><strong>{{ cat.name }}</strong></td>
+                <td>一级</td>
+                <td>{{ cat.sort_order }}</td>
+                <td>
+                    <a href="{{ url_for('admin.edit_category', id=cat.id) }}" class="btn btn-sm btn-info">编辑</a>
+                    <a href="{{ url_for('admin.delete_category', id=cat.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除？')">删除</a>
+                </td>
+             </tr>
+            {% for sub in cat.children %}
+            <tr>
+                <td>{{ sub.id }}</td>
+                <td style="padding-left: 30px;">└─ {{ sub.name }}</td>
+                <td>{{ cat.name }}</td>
+                <td>{{ sub.sort_order }}</td>
+                <td>
+                    <a href="{{ url_for('admin.edit_category', id=sub.id) }}" class="btn btn-sm btn-info">编辑</a>
+                    <a href="{{ url_for('admin.delete_category', id=sub.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除？')">删除</a>
+                </td>
+             </tr>
+            {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

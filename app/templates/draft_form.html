@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ '编辑草稿' if draft else '新建草稿' }}</h2>
+<form method="POST" id="draftForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3"><label>标题</label><input type="text" name="title" class="form-control" value="{{ draft.title if draft else '' }}" required></div>
+    <div class="mb-3"><label>描述</label><textarea name="description" class="form-control">{{ draft.description if draft else '' }}</textarea></div>
+    <div class="mb-3"><label>价格</label><input type="number" step="0.01" name="price" class="form-control" value="{{ draft.price if draft else '' }}" required></div>
+    <div class="mb-3"><label>分类</label><select name="category_id" class="form-select" id="categorySelect">
+        <option value="">无分类</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if draft and draft.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+    </select></div>
+    <div class="mb-3">
+        <label>主图URL</label>
+        <input type="file" id="classifyImageInput" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp" style="display:none;">
+        <div class="input-group">
+            <input type="text" name="image_url" class="form-control" id="imageUrlInput" value="{{ draft.image_url if draft else '' }}">
+            <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('classifyImageInput').click()">上传图片</button>
+            <button type="button" class="btn btn-outline-primary" id="classifyBtn" onclick="smartClassify()">智能识别分类</button>
+        </div>
+        <span id="classifyStatus" class="text-muted small"></span>
+    </div>
+    <div class="mb-3"><label>细节图URL（一行一个）</label><textarea name="detail_images" class="form-control" rows="3">{% if draft and draft.detail_images %}{{ draft.detail_images|replace('["','')|replace('"]','')|replace('","','\n') }}{% endif %}</textarea></div>
+    <div class="mb-3 form-check"><input type="checkbox" name="allow_bargain" class="form-check-input" {% if draft and draft.allow_bargain %}checked{% endif %}> <label class="form-check-label">允许砍价</label></div>
+    <button type="submit" class="btn btn-primary">保存草稿</button>
+    <a href="{{ url_for('main.drafts') }}" class="btn btn-secondary">取消</a>
+</form>
+{% endblock %}

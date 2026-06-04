@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header bg-primary text-white">个人中心</div>
+            <div class="list-group list-group-flush">
+                <a class="list-group-item list-group-item-action" href="{{ url_for('main.profile') }}">个人信息</a>
+                <a class="list-group-item list-group-item-action active" href="{{ url_for('main.sales_stats') }}">售出统计</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <h3>售出统计</h3>
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-success">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">总售出件数</h5>
+                        <h2>{{ stats.total_count }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-primary">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">总成交金额</h5>
+                        <h2>¥{{ stats.total_amount }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-info">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">平均成交价</h5>
+                        <h2>¥{{ stats.avg_amount }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">各分类售出统计</div>
+                    <div class="card-body">
+                        {% if stats.cat_stats %}
+                        <table class="table table-striped">
+                            <thead><tr><th>分类</th><th>售出件数</th><th>总金额</th></tr></thead>
+                            <tbody>
+                                {% for cat in stats.cat_stats %}
+                                <tr>
+                                    <td>{{ cat.name }}</td>
+                                    <td>{{ cat.cnt }}</td>
+                                    <td>¥{{ cat.amount }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p class="text-muted">暂无售出记录</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">最近 5 笔售出</div>
+                    <div class="card-body">
+                        {% if stats.recent %}
+                        <table class="table table-striped">
+                            <thead><tr><th>订单号</th><th>商品</th><th>金额</th><th>时间</th></tr></thead>
+                            <tbody>
+                                {% for order in stats.recent %}
+                                <tr>
+                                    <td><a href="{{ url_for('main.order_detail', order_id=order.id) }}">{{ order.order_number }}</a></td>
+                                    <td>
+                                        {% if order.snapshot %}
+                                            {{ (order.snapshot|from_json).title }}
+                                        {% elif order.item %}
+                                            {{ order.item.title }}
+                                        {% else %}
+                                            商品已删除
+                                        {% endif %}
+                                    </td>
+                                    <td>¥{{ order.total_price }}</td>
+                                    <td>{{ order.local_time.strftime('%Y-%m-%d %H:%M') if order.local_time else order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p class="text-muted">暂无售出记录</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

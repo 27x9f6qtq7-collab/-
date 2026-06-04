@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>收到的砍价请求</h2>
+<table class="table table-striped">
+    <thead>
+        <tr><th>商品</th><th>买家</th><th>出价</th><th>状态</th><th>时间</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+        {% for b in bargains %}
+        <tr>
+            <td><a href="{{ url_for('main.item_detail', item_id=b.item.id) }}">{{ b.item.title }}</a></div>
+            <td>{{ b.buyer.student_id }}</div>
+            <td>¥{{ b.offered_price }}</div>
+            <td>
+                {% if b.status == 'pending' %}待处理
+                {% elif b.status == 'agreed' %}已同意
+                {% elif b.status == 'rejected' %}已拒绝
+                {% endif %}
+              </div>
+            <td>{{ b.local_time.strftime('%Y-%m-%d %H:%M') if b.local_time else b.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+            <td>
+                {% if b.status == 'pending' %}
+                <form method="POST" action="{{ url_for('main.respond_bargain', bargain_id=b.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button name="action" value="agree" class="btn btn-sm btn-success">同意</button>
+                    <button name="action" value="reject" class="btn btn-sm btn-danger">拒绝</button>
+                </form>
+                <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#replyModal{{ b.id }}">回复</button>
+                {% endif %}
+              </div>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- 为每个砍价生成一个回复模态框 -->
+{% for b in bargains %}
+{% if b.status == 'pending' %}
+<div class="modal fade" id="replyModal{{ b.id }}" tabindex="-1" aria-labelledby="replyModalLabel{{ b.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('main.bargain_reply', bargain_id=b.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="replyModalLabel{{ b.id }}">回复买家</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>回复内容</label>
+                        <textarea name="reply_content" class="form-control" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">发送回复</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

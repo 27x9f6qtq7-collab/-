@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>编辑管理员权限</h2>
+<p>用户：<strong>{{ user.student_id }}</strong> ({{ user.email or '无邮箱' }})</p>
+<p>角色：<span class="badge bg-warning text-dark">管理员</span></p>
+<hr>
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3">
+        <label class="form-label fw-bold">授权模块：</label>
+        {% for perm_key, perm_label in all_permissions.items() %}
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="permissions" value="{{ perm_key }}"
+                   id="perm_{{ perm_key }}"
+                   {% if perm_key in current_perms %}checked{% endif %}>
+            <label class="form-check-label" for="perm_{{ perm_key }}">
+                {{ perm_label }}
+            </label>
+        </div>
+        {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary">保存权限</button>
+    <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">取消</a>
+</form>
+{% endblock %}

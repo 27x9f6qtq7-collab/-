@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .stats-card {
+        height: 130px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .stats-card .card-body {
+        text-align: center;
+        width: 100%;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>管理员仪表盘</h2>
+    <div class="btn-group">
+        <!-- 数据面板（仅超级管理员可见） -->
+        {% if current_user.is_super_admin() %}
+        <a href="{{ url_for('admin.data_panel') }}" class="btn btn-outline-primary">
+            📊 数据面板
+        </a>
+        {% endif %}
+
+        <!-- 内容管理 -->
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                内容管理
+            </button>
+            <ul class="dropdown-menu">
+                {% if current_user.is_super_admin() or current_user.has_permission('item_manage') %}
+                <li><a class="dropdown-item" href="{{ url_for('admin.items') }}">📦 物品管理</a></li>
+                {% endif %}
+                {% if current_user.is_super_admin() or current_user.has_permission('category_manage') %}
+                <li><a class="dropdown-item" href="{{ url_for('admin.categories') }}">🏷️ 分类管理</a></li>
+                {% endif %}
+                {% if current_user.is_super_admin() or current_user.has_permission('announcement_manage') %}
+                <li><a class="dropdown-item" href="{{ url_for('admin.announcements') }}">📢 公告管理</a></li>
+                {% endif %}
+                {% if current_user.is_super_admin() or current_user.has_permission('item_manage') %}
+                <li><a class="dropdown-item" href="{{ url_for('admin.drafts') }}">📝 草稿箱</a></li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- 订单管理（带红点，点击后标记已读） -->
+        {% if current_user.is_super_admin() or current_user.has_permission('order_manage') %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="orderMenuBtn">
+                订单管理
+                {% if new_orders_count > 0 %}
+                <span class="badge bg-danger rounded-pill" id="orderBadge">{{ new_orders_count }}</span>
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('admin.orders') }}">所有订单
+                    {% if order_counts.all > 0 %}<span class="badge bg-secondary float-end">{{ order_counts.all }}</span>{% endif %}
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.orders') }}?status=pending">待付款
+                    {% if order_counts.pending > 0 %}<span class="badge bg-warning float-end">{{ order_counts.pending }}</span>{% endif %}
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.orders') }}?status=submitted">待确认
+                    {% if order_counts.submitted > 0 %}<span class="badge bg-info float-end">{{ order_counts.submitted }}</span>{% endif %}
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.orders') }}?status=paid">待发货
+                    {% if order_counts.paid > 0 %}<span class="badge bg-primary float-end">{{ order_counts.paid }}</span>{% endif %}
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.orders') }}?status=shipped">已发货
+                    {% if order_counts.shipped > 0 %}<span class="badge bg-info float-end">{{ order_counts.shipped }}</span>{% endif %}
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.orders') }}?status=completed">已完成
+                    {% if order_counts.completed > 0 %}<span class="badge bg-success float-end">{{ order_counts.completed }}</span>{% endif %}
+                </a></li>
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- 系统设置 -->
+        <div class="btn-group">
+            <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                系统设置
+            </button>
+            <ul class="dropdown-menu">
+                {% if current_user.is_super_admin() or current_user.has_permission('user_manage') %}
+                <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">👥 用户管理</a></li>
+                {% endif %}
+                {% if current_user.is_super_admin() %}
+                <li><a class="dropdown-item" href="{{ url_for('admin.settings') }}">⚙️ 平台设置</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.agreements') }}">📄 协议管理</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('bgUploadInput').click(); return false;">🖼️ 设置背景</a></li>
+                <li><a class="dropdown-item" href="#" onclick="clearBackground(); return false;">🗑️ 清除背景</a></li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- 数据工具 -->
+        {% if current_user.is_super_admin() %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                数据工具
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('admin.export_center') }}">📊 导出中心</a></li>
+                <li>
+                    <a class="dropdown-item position-relative" href="{{ url_for('admin.feedbacks') }}" id="feedbackLink">
+                        反馈管理
+                        {% if pending_feedback_count > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="feedbackBadge">
+                            {{ pending_feedback_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </li>
+                
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary stats-card mb-3">
+            <div class="card-body">
+                <h5>物品总数</h5>
+                <h2>{{ total_items }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success stats-card mb-3">
+            <div class="card-body">
+                <h5>在售物品</h5>
+                <h2>{{ on_sale_items }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning stats-card mb-3">
+            <div class="card-body">
+                <h5>订单总数</h5>
+                <h2>{{ total_orders }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger stats-card mb-3">
+            <div class="card-body">
+                <h5>待确认订单</h5>
+                <h2>{{ pending_submitted_orders }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mt-2">
+    <div class="col-md-3">
+        <div class="card text-white bg-info stats-card mb-3">
+            <div class="card-body">
+                <h5>待发货订单</h5>
+                <h2>{{ shipped_orders }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary stats-card mb-3">
+            <div class="card-body">
+                <h5>已完成订单</h5>
+                <h2>{{ completed_orders }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">近30天订单趋势</div>
+            <div class="card-body">
+                <canvas id="orderTrendChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">热门商品Top10</div>
+            <div class="card-body">
+                <canvas id="hotItemsChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mt-3">
+        <div class="card">
+            <div class="card-header">商品分类占比</div>
+            <div class="card-body">
+                <canvas id="categoryChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="file" id="bgUploadInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="uploadBackground(this)">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    fetch('/admin/stats')
+        .then(res => res.json())
+        .then(data => {
+            new Chart(document.getElementById('orderTrendChart'), {type:'line', data:{labels:data.order_trend.map(i=>i.date), datasets:[{label:'订单数量', data:data.order_trend.map(i=>i.count)}]}});
+            new Chart(document.getElementById('hotItemsChart'), {type:'bar', data:{labels:data.hot_items.map(i=>i.title.slice(0,10)), datasets:[{label:'销量', data:data.hot_items.map(i=>i.sale_count)}]}});
+            new Chart(document.getElementById('categoryChart'), {type:'pie', data:{labels:data.category_stats.map(i=>i.name), datasets:[{data:data.category_stats.map(i=>i.item_count), backgroundColor:['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40']}]}});
+        });
+
+    // 订单管理按钮点击标记已读
+    const orderBtn = document.getElementById('orderMenuBtn');
+    if (orderBtn) {
+        orderBtn.addEventListener('click', function() {
+            fetch("{{ url_for('admin.mark_orders_read') }}", { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const badge = document.getElementById('orderBadge');
+                        if (badge) badge.remove();
+                    }
+                });
+        });
+    }
+
+    // 反馈管理链接点击标记已读
+    const feedbackLink = document.getElementById('feedbackLink');
+    if (feedbackLink) {
+        feedbackLink.addEventListener('click', function() {
+            fetch("{{ url_for('admin.mark_feedback_read') }}", { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const badge = document.getElementById('feedbackBadge');
+                        if (badge) badge.remove();
+                    }
+                });
+        });
+    }
+
+    function uploadBackground(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('background', file);
+        fetch("{{ url_for('admin.upload_background') }}", { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.msg);
+                if (data.success) location.reload();
+            })
+            .catch(() => alert('上传失败，请重试'));
+    }
+
+    function clearBackground() {
+        if (!confirm('确定清除背景图片？')) return;
+        fetch("{{ url_for('admin.remove_background') }}", { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.msg);
+                if (data.success) location.reload();
+            })
+            .catch(() => alert('操作失败，请重试'));
+    }
+</script>
+{% endblock %}

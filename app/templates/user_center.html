@@ -1,0 +1,565 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <!-- 左侧边栏 -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header bg-primary text-white">个人中心</div>
+            <div class="list-group list-group-flush" role="tablist">
+                <button class="list-group-item list-group-item-action active" data-bs-toggle="tab" data-bs-target="#tab-info" type="button">个人信息</button>
+                <button class="list-group-item list-group-item-action" data-bs-toggle="tab" data-bs-target="#tab-orders" type="button">我的订单</button>
+                <button class="list-group-item list-group-item-action" data-bs-toggle="tab" data-bs-target="#tab-messages" type="button">私信</button>
+                <button class="list-group-item list-group-item-action" data-bs-toggle="tab" data-bs-target="#tab-bargains" type="button">我的砍价</button>
+                <button class="list-group-item list-group-item-action" data-bs-toggle="tab" data-bs-target="#tab-blacklist" type="button">黑名单</button>
+                <button class="list-group-item list-group-item-action" data-bs-toggle="tab" data-bs-target="#tab-feedbacks" type="button">我的反馈</button>
+                <button class="list-group-item list-group-item-action" data-bs-toggle="tab" data-bs-target="#tab-sys-messages" type="button">系统消息</button>
+                <button class="list-group-item list-group-item-action" data-bs-toggle="tab" data-bs-target="#tab-search-history" type="button">搜索历史</button>
+                <button class="list-group-item list-group-item-action" data-bs-toggle="tab" data-bs-target="#tab-browse-history" type="button">浏览记录</button>
+                {% if current_user.is_admin %}
+                <button class="list-group-item list-group-item-action" data-bs-toggle="tab" data-bs-target="#tab-sales-stats" type="button">售出统计</button>
+                {% endif %}
+                <a class="list-group-item list-group-item-action" href="{{ url_for('auth.change_password') }}">修改密码</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧内容区 -->
+    <div class="col-md-9">
+        <div class="tab-content">
+
+            <!-- 个人信息 Tab -->
+            <div class="tab-pane fade show active" id="tab-info">
+                <div class="card">
+                    <div class="card-header">欢迎，{{ current_user.student_id }}</div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <img src="{{ url_for('static', filename=current_user.avatar) }}" 
+                                 class="rounded-circle" 
+                                 style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #ddd;" 
+                                 id="avatarImg"
+                                 alt="头像">
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary" id="uploadAvatarBtn">更换头像</button>
+                                <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
+                            </div>
+                        </div>
+                        <p><strong>学号：</strong> {{ current_user.student_id }}</p>
+                        <p><strong>邮箱：</strong> {{ current_user.email or '未设置' }}
+                            <button class="btn btn-sm btn-link" id="editEmailBtn">修改</button>
+                        </p>
+                        <div id="emailEditForm" style="display: none;">
+                            <form method="POST" action="{{ url_for('main.update_email') }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="input-group mb-3">
+                                    <input type="email" name="email" class="form-control" placeholder="新邮箱地址" value="{{ current_user.email or '' }}" required>
+                                    <button class="btn btn-primary" type="submit">保存</button>
+                                    <button class="btn btn-secondary" type="button" id="cancelEmailBtn">取消</button>
+                                </div>
+                            </form>
+                        </div>
+                        <p><strong>注册时间：</strong> {{ current_user.created_at.strftime('%Y-%m-%d') }}</p>
+                        <p><strong>身份：</strong> {% if current_user.is_admin %}管理员{% else %}普通用户{% endif %}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 我的订单 Tab -->
+            <div class="tab-pane fade" id="tab-orders">
+                <h3>我的订单</h3>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr><th>订单号</th><th>商品</th><th>单价</th><th>状态</th><th>留言</th><th>下单时间</th><th>操作</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr>
+                                <td>{{ order.order_number }}</td>
+                                <td>{{ order.item.title if order.item else (order.snapshot|from_json).title if order.snapshot else '商品已删除' }}</td>
+                                <td>¥{{ order.total_price }}</td>
+                                <td>
+                                    {% if order.status == 'pending' %}待付款
+                                    {% elif order.status == 'submitted' %}待确认
+                                    {% elif order.status == 'paid' %}已付款
+                                    {% elif order.status == 'shipped' %}已发货
+                                    {% elif order.status == 'completed' %}已完成
+                                    {% elif order.status == 'cancelled' %}已取消
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.buyer_note %}
+                                    <small class="text-muted" title="{{ order.buyer_note }}">{{ order.buyer_note[:15] }}{% if order.buyer_note|length > 15 %}...{% endif %}</small>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ order.local_time.strftime('%Y-%m-%d %H:%M:%S') if order.local_time else order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    {% if order.status == 'pending' %}
+                                    <button class="btn btn-sm btn-success" onclick="showPaymentModal('{{ order.order_number }}', '{{ order.item.title if order.item else '' }}', '{{ order.total_price }}')">去支付</button>
+                                    <button class="btn btn-sm btn-primary" onclick="confirmPaid('{{ order.id }}', '{{ order.order_number }}')">我已支付</button>
+                                    <form method="POST" action="{{ url_for('main.cancel_order', order_id=order.id) }}" style="display:inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-sm btn-danger" onclick="return confirm('取消订单？')">取消</button>
+                                    </form>
+                                    {% endif %}
+                                    <a href="{{ url_for('main.order_detail', order_id=order.id) }}" class="btn btn-sm btn-info">详情</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="7" class="text-center">暂无订单</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 私信 Tab -->
+            <div class="tab-pane fade" id="tab-messages">
+                <h3>私信中心</h3>
+                <a href="{{ url_for('main.compose_message') }}" class="btn btn-primary mb-3">+ 新建私信</a>
+                <ul class="nav nav-tabs" id="msgTab" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#received" type="button">收件箱</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#sent" type="button">发件箱</button></li>
+                </ul>
+                <div class="tab-content mt-3">
+                    <div class="tab-pane fade show active" id="received">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead><tr><th>发件人</th><th>内容</th><th>时间</th><th>状态</th><th>操作</th></tr></thead>
+                                <tbody>
+                                    {% for msg in received_messages %}
+                                    <tr class="{% if not msg.is_read %}table-info{% endif %}">
+                                        <td>
+                                            {{ msg.sender.student_id }}
+                                            <a href="{{ url_for('main.block_user', user_id=msg.sender.id) }}" class="btn btn-sm btn-danger ms-2" onclick="return confirm('屏蔽后对方将无法给您发私信，确定？')">屏蔽</a>
+                                        </td>
+                                        <td>{{ msg.content[:50] }}{% if msg.content|length > 50 %}...{% endif %}</td>
+                                        <td>{{ msg.local_time.strftime('%Y-%m-%d %H:%M') if msg.local_time else msg.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>{% if msg.is_read %}已读{% else %}未读{% endif %}</td>
+                                        <td><a href="{{ url_for('main.view_message', msg_id=msg.id) }}" class="btn btn-sm btn-primary">查看</a></td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="5" class="text-center">暂无消息</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="sent">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead><tr><th>收件人</th><th>内容</th><th>时间</th><th>操作</th></tr></thead>
+                                <tbody>
+                                    {% for msg in sent_messages %}
+                                    <tr>
+                                        <td>{{ msg.receiver.student_id }}</td>
+                                        <td>{{ msg.content[:50] }}{% if msg.content|length > 50 %}...{% endif %}</td>
+                                        <td>{{ msg.local_time.strftime('%Y-%m-%d %H:%M') if msg.local_time else msg.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td><a href="{{ url_for('main.view_message', msg_id=msg.id) }}" class="btn btn-sm btn-secondary">查看</a></td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="4" class="text-center">暂无已发送消息</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 我的砍价 Tab -->
+            <div class="tab-pane fade" id="tab-bargains">
+                <h3>我的砍价记录</h3>
+                <table class="table table-striped">
+                    <thead><tr><th>商品</th><th>原价</th><th>出价</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
+                    <tbody>
+                        {% for b in my_bargains %}
+                        <tr>
+                            <td><a href="{{ url_for('main.item_detail', item_id=b.item.id) }}">{{ b.item.title }}</a></td>
+                            <td>¥{{ b.item.price }}</td>
+                            <td>¥{{ b.offered_price }}</td>
+                            <td>
+                                {% if b.status == 'pending' %}等待回复
+                                {% elif b.status == 'agreed' %}卖家同意
+                                {% elif b.status == 'rejected' %}卖家拒绝
+                                {% endif %}
+                            </td>
+                            <td>{{ b.local_time.strftime('%Y-%m-%d %H:%M') if b.local_time else b.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if b.status == 'rejected' %}
+                                <a href="{{ url_for('main.item_detail', item_id=b.item.id) }}" class="btn btn-sm btn-primary">再次砍价</a>
+                                {% elif b.status == 'agreed' %}
+                                <a href="{{ url_for('main.item_detail', item_id=b.item.id) }}" class="btn btn-sm btn-success">查看商品</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center">暂无砍价记录</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 黑名单 Tab -->
+            <div class="tab-pane fade" id="tab-blacklist">
+                <h3>我的黑名单</h3>
+                <table class="table table-striped">
+                    <thead><tr><th>被屏蔽用户</th><th>屏蔽时间</th><th>操作</th></tr></thead>
+                    <tbody>
+                        {% for block in blacklist %}
+                        <tr>
+                            <td>{{ block.blocked.student_id }} ({{ block.blocked.email or '无邮箱' }})</td>
+                            <td>{{ block.local_time.strftime('%Y-%m-%d %H:%M') if block.local_time else block.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td><a href="{{ url_for('main.unblock_user', user_id=block.blocked.id) }}" class="btn btn-sm btn-warning">解除屏蔽</a></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center">暂无屏蔽用户</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 我的反馈 Tab -->
+            <div class="tab-pane fade" id="tab-feedbacks">
+                <h3>我的反馈</h3>
+                <h5>提交新反馈</h5>
+                <form method="POST" action="{{ url_for('main.submit_feedback') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3"><label>标题</label><input type="text" name="title" class="form-control" required></div>
+                    <div class="mb-3"><label>内容</label><textarea name="content" class="form-control" rows="5" required></textarea></div>
+                    <button type="submit" class="btn btn-primary mb-3">提交</button>
+                </form>
+                <hr>
+                <h5>反馈记录</h5>
+                <table class="table table-striped">
+                    <thead><tr><th>标题</th><th>内容</th><th>状态</th><th>回复</th><th>时间</th></tr></thead>
+                    <tbody>
+                        {% for fb in feedbacks %}
+                        <tr>
+                            <td>{{ fb.title }}</td>
+                            <td>{{ fb.content }}</td>
+                            <td>{{ fb.status }}</td>
+                            <td>{{ fb.reply or '未回复' }}</td>
+                            <td>{{ fb.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center">暂无反馈</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 系统消息 Tab -->
+            <div class="tab-pane fade" id="tab-sys-messages">
+                <h3>系统消息</h3>
+                <table class="table table-striped">
+                    <thead><tr><th>标题</th><th>内容</th><th>时间</th><th>状态</th><th>操作</th></tr></thead>
+                    <tbody>
+                        {% for msg in sys_messages %}
+                        <tr class="{% if not msg.is_read %}table-primary{% endif %}" id="msg-row-{{ msg.id }}">
+                            <td>{{ msg.title }}</td>
+                            <td>{{ msg.content }}</td>
+                            <td>{{ msg.local_time.strftime('%Y-%m-%d %H:%M') if msg.local_time else msg.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td class="msg-status">{% if msg.is_read %}已读{% else %}未读{% endif %}</td>
+                            <td class="msg-action">{% if not msg.is_read %}<button class="btn btn-sm btn-secondary mark-read-btn" data-msg-id="{{ msg.id }}">标记已读</button>{% endif %}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center">暂无系统消息</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 搜索历史 Tab -->
+            <div class="tab-pane fade" id="tab-search-history">
+                <h3>搜索历史</h3>
+                <div class="mb-3">
+                    <form method="POST" action="{{ url_for('main.clear_search_history') }}" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('确认清除所有搜索历史？')">清除全部搜索历史</button>
+                    </form>
+                </div>
+                {% if search_history %}
+                <table class="table table-striped">
+                    <thead><tr><th>关键词</th><th>搜索时间</th><th>操作</th></tr></thead>
+                    <tbody>
+                        {% for sh in search_history %}
+                        <tr>
+                            <td>{{ sh.keyword }}</td>
+                            <td>{{ sh.local_time.strftime('%Y-%m-%d %H:%M:%S') if sh.local_time else sh.searched_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td><a href="{{ url_for('main.index', search=sh.keyword) }}" class="btn btn-sm btn-outline-primary">再次搜索</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted">暂无搜索历史</p>
+                {% endif %}
+            </div>
+
+            <!-- 浏览记录 Tab -->
+            <div class="tab-pane fade" id="tab-browse-history">
+                <h3>浏览记录</h3>
+                <div class="mb-3">
+                    <form method="POST" action="{{ url_for('main.clear_browse_history') }}" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('确认清除所有浏览记录？')">清除全部浏览记录</button>
+                    </form>
+                </div>
+                {% if browse_history %}
+                <div class="row">
+                    {% for bh in browse_history %}
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100 shadow-sm">
+                            <a href="{{ url_for('main.item_detail', item_id=bh.item.id) }}">
+                                <img src="{{ bh.item.image_url }}" class="card-img-top" style="height: 120px; object-fit: cover;">
+                            </a>
+                            <div class="card-body p-2">
+                                <h6 class="card-title small text-truncate">{{ bh.item.title }}</h6>
+                                <p class="card-text small text-primary fw-bold mb-0">¥{{ bh.item.price }}</p>
+                                <p class="card-text small text-muted mb-0">{{ bh.local_time.strftime('%m-%d %H:%M') if bh.local_time else bh.browsed_at.strftime('%m-%d %H:%M') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">暂无浏览记录</p>
+                {% endif %}
+            </div>
+
+        {% if current_user.is_admin %}
+        <!-- 售出统计 Tab -->
+            <div class="tab-pane fade" id="tab-sales-stats">
+                <h3>售出统计</h3>
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card text-white bg-success">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">总售出件数</h5>
+                                <h2>{{ sales_stats.total_count }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-white bg-primary">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">总成交金额</h5>
+                                <h2>¥{{ sales_stats.total_amount }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-white bg-info">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">平均成交价</h5>
+                                <h2>¥{{ sales_stats.avg_amount }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">各分类售出统计</div>
+                            <div class="card-body">
+                                {% if sales_stats.cat_stats %}
+                                <table class="table table-striped">
+                                    <thead><tr><th>分类</th><th>售出件数</th><th>总金额</th></tr></thead>
+                                    <tbody>
+                                        {% for cat in sales_stats.cat_stats %}
+                                        <tr>
+                                            <td>{{ cat.name }}</td>
+                                            <td>{{ cat.cnt }}</td>
+                                            <td>¥{{ cat.amount }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <p class="text-muted">暂无售出记录</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">最近 5 笔售出</div>
+                            <div class="card-body">
+                                {% if sales_stats.recent %}
+                                <table class="table table-striped">
+                                    <thead><tr><th>订单号</th><th>商品</th><th>金额</th><th>时间</th></tr></thead>
+                                    <tbody>
+                                        {% for order in sales_stats.recent %}
+                                        <tr>
+                                            <td><a href="{{ url_for('main.order_detail', order_id=order.id) }}">{{ order.order_number }}</a></td>
+                                            <td>
+                                                {% if order.snapshot %}
+                                                    {{ (order.snapshot|from_json).title }}
+                                                {% elif order.item %}
+                                                    {{ order.item.title }}
+                                                {% else %}
+                                                    商品已删除
+                                                {% endif %}
+                                            </td>
+                                            <td>¥{{ order.total_price }}</td>
+                                            <td>{{ order.local_time.strftime('%Y-%m-%d %H:%M') if order.local_time else order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <p class="text-muted">暂无售出记录</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div><!-- end tab-content -->
+    </div><!-- end col-md-9 -->
+</div><!-- end row -->
+
+<!-- ========== 支付模态框 ========== -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">扫码支付</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p><strong>订单号：<span id="modalOrderNumber"></span></strong></p>
+                <div class="alert alert-warning">
+                    <strong>⚠️ 付款须知</strong><br>
+                    请务必在转账备注中按以下格式填写：<br>
+                    <code>订单号 + 班级 + 姓名</code><br>
+                    示例：<strong id="sampleOrderNumber"></strong> 计算机1班 张三<br>
+                    <span class="text-danger">未按要求备注将导致无法核对订单，资金损失后果自负。</span>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p>微信支付</p>
+                        <img src="/static/images/pay_qrcode_wechat.png" alt="微信收款码" style="max-width: 100%; max-height: 250px; border: 1px solid #ddd;">
+                    </div>
+                    <div class="col-md-6">
+                        <p>支付宝</p>
+                        <img src="/static/images/pay_qrcode_alipay.png" alt="支付宝收款码" style="max-width: 100%; max-height: 250px; border: 1px solid #ddd;">
+                    </div>
+                </div>
+                <hr>
+                <p>商品：<span id="modalItemTitle"></span></p>
+                <p>金额：¥<span id="modalAmount"></span></p>
+                <p class="text-muted small">支付完成后请点击"我已支付"按钮</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 邮箱编辑
+document.getElementById('editEmailBtn').addEventListener('click', function() {
+    document.getElementById('emailEditForm').style.display = 'block';
+    this.style.display = 'none';
+});
+document.getElementById('cancelEmailBtn').addEventListener('click', function() {
+    document.getElementById('emailEditForm').style.display = 'none';
+    document.getElementById('editEmailBtn').style.display = 'inline-block';
+});
+
+// 支付模态框
+function showPaymentModal(orderNumber, itemTitle, amount) {
+    document.getElementById('modalOrderNumber').innerText = orderNumber;
+    document.getElementById('sampleOrderNumber').innerText = orderNumber;
+    document.getElementById('modalItemTitle').innerText = itemTitle;
+    document.getElementById('modalAmount').innerText = amount;
+    new bootstrap.Modal(document.getElementById('paymentModal')).show();
+}
+
+function confirmPaid(orderId, orderNumber) {
+    if (confirm('请确认您已在转账备注中正确填写：\n订单号 ' + orderNumber + '、您的班级、您的姓名。\n\n未备注或备注不全将导致无法收款，资金损失后果自负。\n点击"确定"即视为已按要求完成支付，订单将提交管理员确认。')) {
+        fetch("{{ url_for('main.mark_as_paid') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ order_id: orderId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("支付请求已提交，请等待管理员确认。");
+                location.reload();
+            } else {
+                alert("操作失败：" + data.message);
+            }
+        })
+        .catch(err => alert("请求出错：" + err));
+    }
+}
+
+// 标记已读 AJAX
+document.querySelectorAll('.mark-read-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const msgId = this.dataset.msgId;
+        const row = document.getElementById('msg-row-' + msgId);
+        fetch('/mark-message-read/' + msgId)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    row.classList.remove('table-primary');
+                    row.querySelector('.msg-status').textContent = '已读';
+                    row.querySelector('.msg-action').innerHTML = '';
+                    const badge = document.getElementById('unread-count-badge');
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.textContent = data.unread_count;
+                            badge.style.display = '';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(err => alert('请求失败：' + err));
+    });
+});
+
+// 头像上传
+document.getElementById('uploadAvatarBtn').addEventListener('click', function() {
+    document.getElementById('avatarFileInput').click();
+});
+document.getElementById('avatarFileInput').addEventListener('change', function() {
+    var file = this.files[0];
+    if (!file) return;
+    if (file.size > 16 * 1024 * 1024) {
+        alert('文件不能超过 16MB');
+        return;
+    }
+    var formData = new FormData();
+    formData.append('avatar', file);
+    fetch("{{ url_for('main.upload_avatar') }}", {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('avatarImg').src = data.avatar_url + '?t=' + Date.now();
+            var navAvatars = document.querySelectorAll('.nav-avatar');
+            navAvatars.forEach(function(a) { a.src = data.avatar_url + '?t=' + Date.now(); });
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(err => alert('上传失败：' + err));
+});
+</script>
+{% endblock %}

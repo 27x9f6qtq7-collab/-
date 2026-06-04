@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>用户管理</h2>
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <tr><th>ID</th><th>学号</th><th>邮箱</th><th>角色</th><th>权限</th><th>注册时间</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td>{{ u.id }}</td>
+                <td>{{ u.student_id }}</td>
+                <td>{{ u.email or '未填写' }}</td>
+                <td>
+                    {% if u.role == 'super_admin' %}
+                    <span class="badge bg-danger">超级管理员</span>
+                    {% elif u.role == 'admin' %}
+                    <span class="badge bg-warning text-dark">管理员</span>
+                    {% else %}
+                    <span class="badge bg-secondary">普通用户</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if u.role == 'admin' %}
+                    {% set perms = u.admin_permissions|from_json if u.admin_permissions else [] %}
+                    {% for p in perms %}
+                    <span class="badge bg-info me-1">{{ p }}</span>
+                    {% endfor %}
+                    {% elif u.role == 'super_admin' %}
+                    <span class="badge bg-success">全部权限</span>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td>{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    {% if current_user.is_super_admin() and u.id != current_user.id %}
+                        {% if u.role == 'user' %}
+                        <a href="{{ url_for('admin.toggle_admin', user_id=u.id) }}" class="btn btn-sm btn-warning">设为管理员</a>
+                        {% elif u.role == 'admin' %}
+                        <a href="{{ url_for('admin.toggle_admin', user_id=u.id) }}" class="btn btn-sm btn-secondary">撤销管理员</a>
+                        <a href="{{ url_for('admin.edit_permissions', user_id=u.id) }}" class="btn btn-sm btn-info">编辑权限</a>
+                        {% endif %}
+                    {% endif %}
+                    <button onclick="resetPassword({{ u.id }}, '{{ u.student_id }}')" class="btn btn-sm btn-info">重置密码</button>
+                    <a href="{{ url_for('main.send_message', user_id=u.id) }}" class="btn btn-sm btn-info">发私信</a>
+                    {% if current_user.is_super_admin() and not u.is_admin and u.id != current_user.id %}
+                    <a href="{{ url_for('admin.user_delete', user_id=u.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('删除用户？')">删除</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<script>
+function resetPassword(userId, student_id) {
+    let newPassword = prompt("请输入用户 " + student_id + " 的新密码（至少6位）:");
+    if (newPassword && newPassword.length >= 6) {
+        fetch("{{ url_for('admin.reset_password') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId, new_password: newPassword })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("密码已重置为：" + newPassword);
+            } else {
+                alert("重置失败：" + data.message);
+            }
+        })
+        .catch(err => alert("请求失败：" + err));
+    } else if (newPassword) {
+        alert("密码长度不能少于6位");
+    }
+}
+</script>
+{% endblock %}

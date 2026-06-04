@@ -1,0 +1,24 @@
+# IDE
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# 敏感信息
+instance/
+*.db
+
+# 打包相关
+build/
+*.spec
+dist/
+
+# 临时文件
+temp/
+
+# 备份
+app/backups/
+
+# 上传文件
+app/static/uploads/

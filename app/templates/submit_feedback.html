@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>提交反馈建议</h2>
+<form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3"><label>标题</label><input type="text" name="title" class="form-control" required></div>
+    <div class="mb-3"><label>内容</label><textarea name="content" class="form-control" rows="5" required></textarea></div>
+    <button type="submit" class="btn btn-primary">提交</button>
+    <a href="{{ url_for('main.my_feedbacks') }}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

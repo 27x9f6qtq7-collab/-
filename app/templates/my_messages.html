@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>系统消息</h2>
+<table class="table table-striped">
+    <thead><tr><th>标题</th><th>内容</th><th>时间</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>
+        {% for msg in messages %}
+        <tr class="{% if not msg.is_read %}table-primary{% endif %}" id="msg-row-{{ msg.id }}">
+            <td>{{ msg.title }}</td>
+            <td>{{ msg.content }}</td>
+            <td>{{ msg.local_time.strftime('%Y-%m-%d %H:%M') if msg.local_time else msg.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="msg-status">{% if msg.is_read %}已读{% else %}未读{% endif %}</td>
+            <td class="msg-action">{% if not msg.is_read %}<button class="btn btn-sm btn-secondary mark-read-btn" data-msg-id="{{ msg.id }}">标记已读</button>{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+document.querySelectorAll('.mark-read-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const msgId = this.dataset.msgId;
+        const row = document.getElementById('msg-row-' + msgId);
+        fetch('/mark-message-read/' + msgId)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    row.classList.remove('table-primary');
+                    row.querySelector('.msg-status').textContent = '已读';
+                    row.querySelector('.msg-action').innerHTML = '';
+                    const badge = document.getElementById('unread-count-badge');
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.textContent = data.unread_count;
+                            badge.style.display = '';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(err => alert('请求失败：' + err));
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>我的订单</h2>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr><th>订单号</th><th>商品</th><th>单价</th><th>状态</th><th>下单时间</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.order_number }}</div>
+                <td>{{ order.item.title if order.item else (order.snapshot|from_json).title if order.snapshot else '商品已删除' }}</div>
+                <td>¥{{ order.total_price }}</div>
+                <td>
+                    {% if order.status == 'pending' %}待付款
+                    {% elif order.status == 'submitted' %}待确认
+                    {% elif order.status == 'paid' %}已付款
+                    {% elif order.status == 'shipped' %}已发货
+                    {% elif order.status == 'completed' %}已完成
+                    {% elif order.status == 'cancelled' %}已取消
+                    {% endif %}
+                 </div>
+                <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                <td>
+                    {% if order.status == 'pending' %}
+                    <button class="btn btn-sm btn-success" onclick="showPaymentModal('{{ order.order_number }}', '{{ order.item.title }}', '{{ order.total_price }}')">去支付</button>
+                    <button class="btn btn-sm btn-primary" onclick="confirmPaid('{{ order.id }}', '{{ order.order_number }}')">我已支付</button>
+                    <form method="POST" action="{{ url_for('main.cancel_order', order_id=order.id) }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-danger" onclick="return confirm('取消订单？')">取消</button>
+                    </form>
+                    {% endif %}
+                    <a href="{{ url_for('main.order_detail', order_id=order.id) }}" class="btn btn-sm btn-info">详情</a>
+                 </div>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页导航（若有） -->
+{% if pagination and pagination.pages > 1 %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('main.my_orders', page=pagination.prev_num) }}">上一页</a>
+        </li>
+        {% for p in pagination.iter_pages() %}
+            {% if p %}
+                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.my_orders', page=p) }}">{{ p }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('main.my_orders', page=pagination.next_num) }}">下一页</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+<!-- ========== 支付模态框 ========== -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentModalLabel">扫码支付</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p><strong>订单号：<span id="modalOrderNumber"></span></strong></p>
+                <div class="alert alert-warning">
+                    <strong>⚠️ 付款须知</strong><br>
+                    请务必在转账备注中按以下格式填写：<br>
+                    <code>订单号 + 班级 + 姓名</code><br>
+                    示例：<strong id="sampleOrderNumber"></strong> 计算机1班 张三<br>
+                    <span class="text-danger">未按要求备注将导致无法核对订单，资金损失后果自负。</span>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p>微信支付</p>
+                        <img src="/static/images/pay_qrcode_wechat.png" alt="微信收款码" style="max-width: 100%; max-height: 250px; border: 1px solid #ddd;">
+                    </div>
+                    <div class="col-md-6">
+                        <p>支付宝</p>
+                        <img src="/static/images/pay_qrcode_alipay.png" alt="支付宝收款码" style="max-width: 100%; max-height: 250px; border: 1px solid #ddd;">
+                    </div>
+                </div>
+                <hr>
+                <p>商品：<span id="modalItemTitle"></span></p>
+                <p>金额：¥<span id="modalAmount"></span></p>
+                <p class="text-muted small">支付完成后请点击“我已支付”按钮</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 联系管理人员模态框（如需） -->
+<div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="contactModalLabel">联系管理人员</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p>如订单长时间未确认，请联系管理员：</p>
+                <p><strong>{{ admin_contact }}</strong></p>
+                <p class="text-muted small">请提供您的订单号和学号以便快速处理。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showPaymentModal(orderNumber, itemTitle, amount) {
+    document.getElementById('modalOrderNumber').innerText = orderNumber;
+    document.getElementById('sampleOrderNumber').innerText = orderNumber;
+    document.getElementById('modalItemTitle').innerText = itemTitle;
+    document.getElementById('modalAmount').innerText = amount;
+    var modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+    modal.show();
+}
+
+function confirmPaid(orderId, orderNumber) {
+    if (confirm(`请确认您已在转账备注中正确填写：\n订单号 ${orderNumber}、您的班级、您的姓名。\n\n未备注或备注不全将导致无法收款，资金损失后果自负。\n点击“确定”即视为已按要求完成支付，订单将提交管理员确认。`)) {
+        fetch("{{ url_for('main.mark_as_paid') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ order_id: orderId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("支付请求已提交，请等待管理员确认。");
+                location.reload();
+            } else {
+                alert("操作失败：" + data.message);
+            }
+        })
+        .catch(err => alert("请求出错：" + err));
+    }
+}
+
+function showContactModal() {
+    var modal = new bootstrap.Modal(document.getElementById('contactModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

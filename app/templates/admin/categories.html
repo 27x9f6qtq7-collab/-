@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>商品分类管理</h2>
+<a href="{{ url_for('admin.category_add') }}" class="btn btn-success mb-3">+ 新增分类</a>
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead><tr><th>分类名称</th><th>排序</th><th>商品数量</th><th>创建时间</th><th>操作</th></tr></thead>
+        <tbody>
+            {% macro render_category(cat, level=0) %}
+            <tr>
+                <td>{{ '|---' * level }}{{ cat.name }}</td>
+                <td>{{ cat.sort_order }}</td>
+                <td>{{ cat.total_item_count }}</td>
+                <td>{{ cat.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <a href="{{ url_for('admin.category_edit', cat_id=cat.id) }}" class="btn btn-sm btn-primary">编辑</a>
+                    <a href="{{ url_for('admin.category_delete', cat_id=cat.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除该分类？')">删除</a>
+                </td>
+            </tr>
+            {% for child in cat.children|sort(attribute='sort_order') %}
+                {{ render_category(child, level+1) }}
+            {% endfor %}
+            {% endmacro %}
+
+            {% for cat in categories|sort(attribute='sort_order') %}
+                {{ render_category(cat) }}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

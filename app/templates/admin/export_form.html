@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>按日期范围导出订单</h2>
+<form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3"><label>开始日期</label><input type="date" name="start_date" class="form-control" required></div>
+    <div class="mb-3"><label>结束日期</label><input type="date" name="end_date" class="form-control" required></div>
+    <button type="submit" class="btn btn-primary">导出</button>
+    <a href="{{ url_for('admin.orders') }}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

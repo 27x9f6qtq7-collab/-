@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>商品草稿箱</h2>
+<a href="{{ url_for('admin.draft_add') }}" class="btn btn-success mb-3">+ 新建草稿</a>
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <tr><th>ID</th><th>标题</th><th>价格</th><th>卖家</th><th>更新时间</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            {% for draft in drafts %}
+            <tr>
+                <td>{{ draft.id }}</div>
+                <td>{{ draft.title }}</div>
+                <td>¥{{ draft.price }}</div>
+                <td>{{ draft.user.student_id if draft.user else '未知' }}</div>
+                <td>{{ draft.updated_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                <td>
+                    <a href="{{ url_for('admin.draft_edit', draft_id=draft.id) }}" class="btn btn-sm btn-primary">编辑</a>
+                    <a href="{{ url_for('admin.draft_publish', draft_id=draft.id) }}" class="btn btn-sm btn-success">发布</a>
+                    <a href="{{ url_for('admin.draft_delete', draft_id=draft.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除草稿？')">删除</a>
+                  </div>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

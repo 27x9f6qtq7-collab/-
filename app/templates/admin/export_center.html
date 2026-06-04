@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>导出中心</h2>
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">📦 订单列表</h5>
+                <p class="card-text">导出所有订单，支持按状态筛选。</p>
+                <div class="btn-group">
+                    <a href="{{ url_for('admin.export_orders') }}" class="btn btn-primary">全部订单</a>
+                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('admin.export_orders', status='pending') }}">待付款</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.export_orders', status='submitted') }}">待确认</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.export_orders', status='paid') }}">待发货</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.export_orders', status='shipped') }}">已发货</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.export_orders', status='completed') }}">已完成</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">👥 用户列表</h5>
+                <p class="card-text">导出所有用户信息。</p>
+                <a href="{{ url_for('admin.export_users') }}" class="btn btn-primary">导出用户</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">📇 商品列表</h5>
+                <p class="card-text">导出所有商品信息。</p>
+                <a href="{{ url_for('admin.export_items') }}" class="btn btn-primary">导出商品</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class-card class="card-body">
+                <h5 class="card-title">📅 按日期导出订单</h5>
+                <p class="card-text">选择日期范围导出订单明细。</p>
+                <a href="{{ url_for('admin.export_orders_by_date') }}" class="btn btn-primary">设置日期</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">📊 统计报表</h5>
+                <p class="card-text">导出包含图表和明细的统计报表（Excel）。</p>
+                <a href="{{ url_for('admin.export_stats') }}" class="btn btn-primary">生成报表</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">📜 操作日志</h5>
+                <p class="card-text">导出管理员操作日志（支持筛选）。</p>
+                <a href="{{ url_for('admin.export_logs') }}" class="btn btn-primary">导出日志</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
